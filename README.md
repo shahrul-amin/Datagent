@@ -48,8 +48,6 @@ datagent/
 │   │   │   ├── FileUpload.jsx
 │   │   │   ├── Header.jsx
 │   │   │   └── Sidebar.jsx
-│   │   ├── hooks/          # Custom React hooks
-│   │   │   └── useChat.jsx
 │   │   ├── services/       # API and storage services
 │   │   │   ├── ApiService.js
 │   │   │   └── StorageService.js
