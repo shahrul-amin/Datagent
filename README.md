@@ -95,7 +95,7 @@ datagent/
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/shahrul-amin/Datagent
    cd datagent
    ```
 
@@ -126,9 +126,7 @@ datagent/
    
    **API Configuration** - Create `server/.env`:
    ```json
-   {
-     "GEMINI_API_KEY": "your_gemini_api_key_here"
-   }
+   "GEMINI_API_KEY": "your_gemini_api_key_here"
    ```
 
 ### Running the Application
