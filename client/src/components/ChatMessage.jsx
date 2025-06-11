@@ -4,7 +4,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import Plot from 'react-plotly.js';
 
-export default function ChatMessage({ type, text, file, loading, error }) {
+export default function ChatMessage({ type, text, file, loading, error, isSummary }) {
   
   const renderContent = () => {
     if (loading) {
@@ -18,12 +18,109 @@ export default function ChatMessage({ type, text, file, loading, error }) {
           <span style={{ color: 'var(--text-secondary)' }}>Thinking...</span>
         </span>
       );
-    }
-
-    if (error) {
+    }    if (error) {
       return (
         <div className="p-3 rounded-lg" style={{ backgroundColor: 'rgba(234, 67, 53, 0.1)', border: '1px solid rgba(234, 67, 53, 0.3)' }}>
-          <p style={{ color: '#ea4335' }}>{text}</p>
+          <p style={{ color: '#ea4335' }}>{text || 'An error occurred'}</p>
+        </div>
+      );
+    }
+
+    // Special rendering for summary messages - add type checking
+    if (isSummary || (typeof text === 'string' && text.startsWith('[CONVERSATION SUMMARY]'))) {
+      const summaryText = (text || '').replace('[CONVERSATION SUMMARY]:', '').trim();
+      return (
+        <div className="p-4 rounded-lg border-l-4" 
+             style={{ 
+               backgroundColor: 'rgba(66, 133, 244, 0.1)', 
+               borderLeftColor: 'var(--accent-blue)',
+               border: '1px solid rgba(66, 133, 244, 0.3)'
+             }}>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="material-symbols-rounded text-sm" style={{ color: 'var(--accent-blue)' }}>
+              summarize
+            </span>
+            <span className="text-sm font-medium" style={{ color: 'var(--accent-blue)' }}>
+              Conversation Summary
+            </span>
+          </div>
+          <ReactMarkdown 
+            className="prose prose-invert max-w-none"
+            components={{
+              code: ({node, inline, className, children, ...props}) => {
+                const match = /language-(\w+)/.exec(className || '');
+                return !inline && match ? (
+                  <SyntaxHighlighter
+                    language={match[1]}
+                    style={vscDarkPlus}
+                    PreTag="div"
+                    className="rounded-lg"
+                    {...props}
+                  >
+                    {String(children).replace(/\n$/, '')}
+                  </SyntaxHighlighter>
+                ) : (
+                  <code className="bg-gray-600 rounded px-1 py-0.5" style={{ color: 'var(--text-primary)' }} {...props}>
+                    {children}
+                  </code>
+                );
+              },
+              h1: ({children, ...props}) => (
+                <h1 className="text-2xl font-bold mb-4 mt-6" style={{ color: 'var(--text-primary)' }} {...props}>
+                  {children}
+                </h1>
+              ),
+              h2: ({children, ...props}) => (
+                <h2 className="text-xl font-semibold mb-3 mt-5" style={{ color: 'var(--text-primary)' }} {...props}>
+                  {children}
+                </h2>
+              ),
+              h3: ({children, ...props}) => (
+                <h3 className="text-lg font-medium mb-2 mt-4" style={{ color: 'var(--text-primary)' }} {...props}>
+                  {children}
+                </h3>
+              ),
+              p: ({children, ...props}) => (
+                <p className="mb-3 leading-relaxed" style={{ color: 'var(--text-primary)' }} {...props}>
+                  {children}
+                </p>
+              ),
+              ul: ({children, ...props}) => (
+                <ul className="mb-3 ml-4 space-y-1" {...props}>
+                  {children}
+                </ul>
+              ),
+              ol: ({children, ...props}) => (
+                <ol className="mb-3 ml-4 space-y-1" {...props}>
+                  {children}
+                </ol>
+              ),
+              li: ({children, ...props}) => (
+                <li className="leading-relaxed" style={{ color: 'var(--text-primary)' }} {...props}>
+                  {children}
+                </li>
+              ),
+              strong: ({children, ...props}) => (
+                <strong className="font-semibold" style={{ color: 'var(--text-primary)' }} {...props}>
+                  {children}
+                </strong>
+              ),
+              em: ({children, ...props}) => (
+                <em className="italic" style={{ color: 'var(--text-secondary)' }} {...props}>
+                  {children}
+                </em>
+              ),
+              blockquote: ({children, ...props}) => (
+                <blockquote className="border-l-4 pl-4 italic my-3" 
+                           style={{ borderColor: 'var(--accent-blue)', color: 'var(--text-secondary)' }} 
+                           {...props}>
+                  {children}
+                </blockquote>
+              )
+            }}
+          >
+            {summaryText}
+          </ReactMarkdown>
         </div>
       );
     }
@@ -47,15 +144,19 @@ export default function ChatMessage({ type, text, file, loading, error }) {
                 </div>
               )}
             </div>
-          )}
-          <p style={{ color: 'var(--text-primary)' }}>{text}</p>
+          )}          <p style={{ color: 'var(--text-primary)' }}>{text || ''}</p>
         </>
       );    }
 
     // Bot response - render markdown for all bot messages
     if (type === 'bot') {
+      // Handle empty or null text
+      if (!text) {
+        return <p style={{ color: 'var(--text-secondary)' }}>No response</p>;
+      }
+
       // Check if it's a rich response
-      if (text?.type === 'rich_response') {
+      if (typeof text === 'object' && text?.type === 'rich_response') {
         return (
           <div className="rich-response">
             {text.content.map((section, idx) => {
@@ -266,17 +367,16 @@ export default function ChatMessage({ type, text, file, loading, error }) {
                            {...props}>
                   {children}
                 </blockquote>
-              )
-            }}
+              )            }}
           >
-            {text}
+            {text || ''}
           </ReactMarkdown>
         </div>
       );
     }
 
-    // Plain text response
-    return <p>{text}</p>;
+    // Plain text response - handle null/undefined text
+    return <p>{text || ''}</p>;
   };
 
   return (

@@ -44,13 +44,15 @@ class CodeExecutor:
                                facecolor='white', edgecolor='none')
                     img_buffer.seek(0)
                     img_str = base64.b64encode(img_buffer.getvalue()).decode()
-                    
-                    if len(img_str) > 1000:
+                      # Check if image has meaningful content (remove arbitrary 1000 char limit)
+                    if len(img_str) > 100:  # Very minimal check for actual image data
                         self.figures.append({
                             'type': 'matplotlib',
                             'data': img_str
                         })
-                        logger.info("Matplotlib figure captured and added to results")
+                        logger.info(f"Matplotlib figure captured (size: {len(img_str)} chars)")
+                    else:
+                        logger.warning(f"Figure too small to be meaningful (size: {len(img_str)} chars)")
                     img_buffer.close()
                     plt.close(fig)
                     
@@ -79,16 +81,27 @@ class CodeExecutor:
         try:
             self._capture_output()
             plt.ioff()
-            
-            # Execute the code block
+              # Execute the code block
             exec(code, namespace)
             
-            # Capture any matplotlib figures
+            # Capture any matplotlib figures (both show_plot() and auto-capture)
             self._save_current_figure()
             
-            # Log results
+            # Auto-capture any remaining figures not captured by show_plot()
+            remaining_figs = plt.get_fignums()
+            if remaining_figs and not self.figures:
+                logger.info("Auto-capturing remaining figures not captured by show_plot()")
+                self._save_current_figure()
+              # Log results with debugging info
             if self.figures:
                 logger.info(f"Generated {len(self.figures)} figure(s) in block {block_index + 1}")
+                for i, fig in enumerate(self.figures):
+                    logger.info(f"  Figure {i+1}: type={fig['type']}, data_size={len(fig['data'])} chars")
+            else:
+                logger.warning(f"No figures captured in block {block_index + 1}! Check:")
+                logger.warning("  - Does code call show_plot()?")
+                logger.warning("  - Is data available for plotting?")
+                logger.warning("  - Are there any errors in the plotting code?")
             
             if self.output.strip():
                 logger.info(f"Code block {block_index + 1} produced output: {self.output[:100]}...")

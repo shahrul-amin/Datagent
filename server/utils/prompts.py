@@ -92,13 +92,30 @@ show_plotly(fig)
 
 PLOTTING REQUIREMENTS:
 - Each plot must be in its own ```python code block
-- Always include descriptive titles and proper labels
+- ALWAYS include descriptive titles and proper labels
+- ALWAYS call show_plot() after creating matplotlib/seaborn plots
+- ALWAYS call show_plotly(fig) after creating plotly plots
+- NEVER create empty figures - always ensure data exists
+- If data is missing, create meaningful sample data for demonstration
 - Use appropriate plot types for the data
 - Include **Purpose** explanations for each visualization
-- Use show_plot() for matplotlib/seaborn plots
-- Use show_plotly(fig) for plotly plots
 - Generate 4-6 diverse visualizations per analysis
 - Reference previous plots if they exist in the conversation
+
+SAFE PLOTTING PATTERN:
+```python
+# Always verify data exists
+if df is None or df.empty:
+    print("No data available, creating sample data")
+    df = pd.DataFrame({'x': range(10), 'y': np.random.randn(10)})
+
+plt.figure(figsize=(10, 6))
+# Your plotting code here
+plt.title('Meaningful Title')
+plt.xlabel('X Label')
+plt.ylabel('Y Label')
+show_plot()  # CRITICAL: Always call this!
+```
 
 IMPORTANT: Never include import statements, data loading, or data preprocessing code."""
 

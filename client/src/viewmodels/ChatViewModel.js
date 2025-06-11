@@ -8,34 +8,46 @@ export function useChatViewModel() {  const [chatHistory, setChatHistory] = useS
   const [currentChat, setCurrentChat] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [fileState, setFileState] = useState(new FileState());
-  const abortController = useRef(null);
-  // Load chat history on mount
+  const abortController = useRef(null);  // Load chat history on mount
   useEffect(() => {
-    const history = StorageService.loadChatHistory();
-    // Ensure all chats are proper Chat instances
-    const validChats = history.map(chat => {
-      if (chat instanceof Chat) {
-        return chat;
-      } else {
-        // Recreate as Chat instance if it's a plain object
-        const newChat = new Chat(chat.title);
-        newChat.id = chat.id;
-        newChat.messages = chat.messages || [];
-        newChat.timestamp = chat.timestamp;
-        newChat.lastUpdated = chat.lastUpdated;
-        return newChat;
+    const loadHistory = async () => {
+      try {
+        const history = await StorageService.loadChatHistory();
+        // Ensure all chats are proper Chat instances
+        const validChats = history.map(chat => {
+          if (chat instanceof Chat) {
+            return chat;
+          } else {
+            // Recreate as Chat instance if it's a plain object
+            const newChat = new Chat(chat.title);
+            newChat.id = chat.id;
+            newChat.messages = chat.messages || [];
+            newChat.timestamp = chat.timestamp;
+            newChat.lastUpdated = chat.lastUpdated;
+            newChat.hasSummary = chat.hasSummary || false;
+            return newChat;
+          }
+        });
+        setChatHistory(validChats);
+        if (validChats.length > 0) {
+          setCurrentChat(validChats[0]);
+        }
+      } catch (error) {
+        console.error('Failed to load chat history:', error);
+        setChatHistory([]);
       }
-    });
-    setChatHistory(validChats);
-    if (validChats.length > 0) {
-      setCurrentChat(validChats[0]);
-    }
+    };
+    
+    loadHistory();
   }, []);
-
   // Save chat history when it changes
   useEffect(() => {
     if (chatHistory.length > 0) {
-      StorageService.saveChatHistory(chatHistory);
+      // Use async save without blocking UI
+      StorageService.saveChatHistory(chatHistory).catch(error => {
+        console.error('Failed to save chat history:', error);
+        // Could show user notification here
+      });
     }
   }, [chatHistory]);
   // Update current chat in history
@@ -108,10 +120,8 @@ export function useChatViewModel() {  const [chatHistory, setChatHistory] = useS
     activeChat.addMessage(userMessage);
 
     // Clear file state immediately after adding the user message
-    setFileState(new FileState());
-
-    // Add loading bot message
-    const botMessage = new ChatMessage('bot', '', null, true);    activeChat.addMessage(botMessage);
+    setFileState(new FileState());    // Add loading bot message
+    const botMessage = new ChatMessage('bot', 'Thinking...', null, true);activeChat.addMessage(botMessage);
     
     // Ensure currentChat is a proper Chat instance
     const updatedChat = activeChat instanceof Chat ? activeChat : new Chat(activeChat.title);

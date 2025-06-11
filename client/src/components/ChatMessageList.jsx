@@ -23,11 +23,14 @@ export default function ChatMessageList({ messages }) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
     }
   }, [messages[messages.length - 1]?.text, messages[messages.length - 1]?.loading]);
-
   return (
     <div ref={containerRef} className="space-y-4">
       {messages.map((message, index) => (
-        <ChatMessage key={index} {...message} />
+        <ChatMessage 
+          key={index} 
+          {...message} 
+          isSummary={message.isSummary || false}
+        />
       ))}
       {/* Invisible element to scroll to */}
       <div ref={messagesEndRef} />

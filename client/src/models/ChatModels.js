@@ -3,7 +3,7 @@
 export class ChatMessage {
   constructor(type, text, file = null, loading = false, error = false, meta = null) {
     this.type = type; // 'user' | 'bot'
-    this.text = text;
+    this.text = text || ''; // Ensure text is always a string
     this.file = file;
     this.loading = loading;
     this.error = error;
@@ -19,6 +19,7 @@ export class Chat {
     this.messages = [];
     this.timestamp = Date.now();
     this.lastUpdated = Date.now();
+    this.hasSummary = false; // Track if chat has been summarized
   }
 
   addMessage(message) {
@@ -39,6 +40,21 @@ export class Chat {
     return firstMessage.length > 30 
       ? firstMessage.substring(0, 30) + '...' 
       : firstMessage || 'New Chat';
+  }
+
+  // Get size in bytes for storage management
+  getSizeInBytes() {
+    return new Blob([JSON.stringify(this)]).size;
+  }
+
+  // Get size in MB for storage management
+  getSizeInMB() {
+    return this.getSizeInBytes() / (1024 * 1024);
+  }
+
+  // Check if chat is large enough to warrant summarization
+  needsSummarization(maxSizeMB = 100) {
+    return this.getSizeInMB() > maxSizeMB;
   }
 }
 

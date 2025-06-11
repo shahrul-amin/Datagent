@@ -1,5 +1,6 @@
 // Clean sidebar for chat history navigation
 import { useState } from 'react';
+import StorageStats from './StorageStats.jsx';
 
 export default function Sidebar({ 
   isOpen, 
@@ -11,6 +12,7 @@ export default function Sidebar({
   onDeleteChat 
 }) {
   const [hoveredChatId, setHoveredChatId] = useState(null);
+  const [showStorageStats, setShowStorageStats] = useState(false);
 
   const formatDate = (timestamp) => {
     const date = new Date(timestamp);
@@ -52,9 +54,7 @@ export default function Sidebar({
                 close
               </span>
             </button>
-          </div>
-
-          <div className="p-4">
+          </div>          <div className="p-4 space-y-2">
             <button
               onClick={onNewChat}
               className="w-full flex items-center gap-3 p-3 rounded-lg border transition-all duration-200 hover:scale-105"
@@ -66,6 +66,19 @@ export default function Sidebar({
             >
               <span className="material-symbols-rounded">add</span>
               <span>New Chat</span>
+            </button>
+            
+            <button
+              onClick={() => setShowStorageStats(true)}
+              className="w-full flex items-center gap-3 p-3 rounded-lg border transition-all duration-200 hover:scale-105"
+              style={{ 
+                backgroundColor: 'var(--bg-primary)', 
+                borderColor: 'var(--border-color)',
+                color: 'var(--text-secondary)'
+              }}
+            >
+              <span className="material-symbols-rounded">storage</span>
+              <span>Storage Info</span>
             </button>
           </div>
 
@@ -130,11 +143,15 @@ export default function Sidebar({
                     ))}
                   </div>
                 ))}
-              </>
-            )}
+              </>            )}
           </div>
         </div>
       </div>
+
+      <StorageStats 
+        isOpen={showStorageStats} 
+        onClose={() => setShowStorageStats(false)} 
+      />
     </>
   );
 }
