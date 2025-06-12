@@ -167,3 +167,13 @@ textarea:focus {
   transform: scale(1.1);
   filter: drop-shadow(0 0 8px var(--accent-blue));
 }
+
+/* Typing cursor animation */
+@keyframes blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
+}

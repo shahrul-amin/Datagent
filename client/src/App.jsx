@@ -1,4 +1,4 @@
-// Main application component using MVVM architecture
+// Main application component
 import ChatView from './views/ChatView';
 
 export default function App() {

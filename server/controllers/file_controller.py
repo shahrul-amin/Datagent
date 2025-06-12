@@ -1,4 +1,4 @@
-# File controller for handling file upload endpoints
+# File upload controller
 import logging
 from flask import request, jsonify
 from typing import Dict, Any

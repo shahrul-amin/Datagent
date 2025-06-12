@@ -1,4 +1,4 @@
-// Main chat view component
+// Main chat view
 import { useState } from 'react';
 import ChatHeader from '../components/Header';
 import ChatMessageList from '../components/ChatMessageList';

@@ -1,4 +1,4 @@
-// Chat data models and types
+// Chat data models
 
 export class ChatMessage {
   constructor(type, text, file = null, loading = false, error = false, meta = null) {

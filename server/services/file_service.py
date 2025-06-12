@@ -81,24 +81,3 @@ class FileService:
         """Get the full path of an uploaded file"""
         file_path = os.path.join(self.upload_folder, filename)
         return file_path if os.path.exists(file_path) else None
-    
-    def delete_file(self, filename: str) -> bool:
-        """Delete an uploaded file"""
-        try:
-            file_path = os.path.join(self.upload_folder, filename)
-            if os.path.exists(file_path):
-                os.remove(file_path)
-                return True
-            return False
-        except Exception as e:
-            logger.error(f"Error deleting file {filename}: {e}")
-            return False
-    
-    def list_files(self) -> List[str]:
-        """List all uploaded files"""
-        try:
-            return [f for f in os.listdir(self.upload_folder) 
-                   if os.path.isfile(os.path.join(self.upload_folder, f))]
-        except Exception as e:
-            logger.error(f"Error listing files: {e}")
-            return []

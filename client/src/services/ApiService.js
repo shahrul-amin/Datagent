@@ -9,21 +9,10 @@ class ApiService {
       headers: {
         'Content-Type': 'application/json'
       }
-    });
-
-    // Add response interceptor for better error handling
+    });    // Add response interceptor for error handling
     this.client.interceptors.response.use(
       (response) => response,
       (error) => {
-        console.error('API Error:', error);
-        if (error.response) {
-          console.error('Error response:', error.response.data);
-          console.error('Error status:', error.response.status);
-        } else if (error.request) {
-          console.error('Error request:', error.request);
-        } else {
-          console.error('Error message:', error.message);
-        }
         return Promise.reject(error);
       }
     );
@@ -52,44 +41,83 @@ class ApiService {
     }));
     
     formData.append('history', JSON.stringify(formattedHistory));
-    
-    // Use longer timeout for file uploads (2 minutes)
+      // Use longer timeout for file uploads (2 minutes)
     const response = await this.client.post('/chat', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
       timeout: 120000 // 2 minutes for file processing
     });
     return response.data;
-  } async sendSequentialAnalysis(file, message, history, sessionId = 'default') {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('message', message);
-    formData.append('workflow_type', 'sequential');
-    formData.append('session_id', sessionId);
-    
+  }
+
+  // Streaming version for typing effect
+  async sendTextMessageStream(message, history, onChunk, abortSignal) {
     // Format the history correctly for the API
     const formattedHistory = history?.map(msg => ({
       role: msg.type,
       content: msg.text
     }));
-    
-    formData.append('history', JSON.stringify(formattedHistory || []));
-    
-    const response = await this.client.post('/chat', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
+
+    const eventSource = new EventSource(
+      `http://localhost:5000/chat/stream`,
+      { withCredentials: false }
+    );
+
+    // Send the message data via POST to initiate streaming
+    try {
+      const response = await fetch('http://localhost:5000/chat/stream', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message,
+          history: formattedHistory
+        }),
+        signal: abortSignal
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    });
-    return response.data;
-  }
 
-  async getChatContext(sessionId) {
-    const response = await this.client.get(`/chat/context/${sessionId}`);
-    return response.data;
-  }
-
-  async clearChatContext(sessionId) {
-    const response = await this.client.delete(`/chat/context/${sessionId}`);
-    return response.data;
+      // Read the stream
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          
+          if (done) break;
+          
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split('\n');
+            for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                
+                if (data.chunk) {
+                  onChunk(data.chunk);
+                } else if (data.type === 'complete') {
+                  return;
+                } else if (data.error || data.type === 'error') {
+                  throw new Error(data.error || 'Stream error');
+                }
+              } catch (parseError) {
+                console.warn('Failed to parse SSE data:', line);
+              }
+            }
+          }
+        }
+      } finally {
+        reader.releaseLock();
+      }    } catch (error) {
+      if (error.name === 'AbortError') {
+        throw error;
+      }
+      throw error;
+    }
   }
 }
 

@@ -1,4 +1,4 @@
-// Enhanced FileUpload component with Copilot-like UI
+// File upload component
 import { useState } from 'react';
 
 export default function FileUpload({ fileState, onFileChange, onCancelFile, inputRef }) {

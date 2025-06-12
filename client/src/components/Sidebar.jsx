@@ -1,4 +1,4 @@
-// Clean sidebar for chat history navigation
+// Chat history navigation sidebar
 import { useState } from 'react';
 import StorageStats from './StorageStats.jsx';
 

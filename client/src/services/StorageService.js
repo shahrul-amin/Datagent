@@ -1,4 +1,4 @@
-// Enhanced storage service with IndexedDB and automatic cleanup
+// Storage service with IndexedDB and automatic cleanup
 import { Chat } from '../models/ChatModels.js';
 import ApiService from './ApiService.js';
 
@@ -17,9 +17,7 @@ class StorageService {
   async initDB() {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(this.DB_NAME, this.DB_VERSION);
-      
-      request.onerror = () => {
-        console.error('Failed to open IndexedDB:', request.error);
+        request.onerror = () => {
         reject(request.error);
       };
       
@@ -38,14 +36,14 @@ class StorageService {
     });
   }
 
-  // Get storage size of a chat in MB
+  // Get chat storage size in MB
   getChatSizeMB(chat) {
     const chatString = JSON.stringify(chat);
     const sizeInBytes = new Blob([chatString]).size;
     return sizeInBytes / (1024 * 1024);
   }
 
-  // Summarize old messages in a chat
+  // Summarize old messages
   async summarizeOldMessages(chat) {
     try {
       if (!chat.messages || chat.messages.length < 10) return chat;
@@ -72,35 +70,27 @@ class StorageService {
         text: `[CONVERSATION SUMMARY]: ${summaryResponse.response}`,
         timestamp: new Date().toISOString(),
         isSummary: true
-      };
-
-      // Update chat with summary + recent messages
+      };      // Update chat with summary + recent messages
       chat.messages = [summaryMessage, ...messagesToKeep];
       chat.hasSummary = true;
-      
-      console.log(`Summarized ${messagesToSummarize.length} messages for chat: ${chat.title}`);
-      return chat;
+        return chat;
     } catch (error) {
-      console.error('Failed to summarize messages:', error);
       // If summarization fails, just truncate old messages
-      chat.messages = chat.messages.slice(-20); // Keep last 20 messages
+      chat.messages = chat.messages.slice(-20);
       return chat;
     }
   }
-
-  // Check and cleanup chat if needed
   async checkAndCleanupChat(chat) {
     const sizeInMB = this.getChatSizeMB(chat);
     
     if (sizeInMB > this.MAX_CHAT_SIZE_MB) {
-      console.log(`Chat "${chat.title}" exceeds ${this.MAX_CHAT_SIZE_MB}MB (${sizeInMB.toFixed(2)}MB). Starting cleanup...`);
       return await this.summarizeOldMessages(chat);
     }
     
     return chat;
   }
 
-  // Save chat history with automatic cleanup
+  // Save chat history with cleanup
   async saveChatHistory(chatHistory) {
     try {
       // Ensure DB is initialized
@@ -111,13 +101,10 @@ class StorageService {
       // Check and cleanup each chat if needed
       const cleanedHistory = await Promise.all(
         chatHistory.map(chat => this.checkAndCleanupChat(chat))
-      );
-
-      // Try localStorage first for quick access
+      );      // Try localStorage first for quick access
       try {
         localStorage.setItem(this.STORAGE_KEY, JSON.stringify(cleanedHistory));
       } catch (localStorageError) {
-        console.log('localStorage full, using IndexedDB only');
         localStorage.removeItem(this.STORAGE_KEY);
       }
 
@@ -136,11 +123,8 @@ class StorageService {
           messages: chat.messages,
           timestamp: chat.timestamp,
           lastUpdated: chat.lastUpdated,
-          hasSummary: chat.hasSummary || false
-        });
+          hasSummary: chat.hasSummary || false        });
       }
-
-      console.log(`Saved ${cleanedHistory.length} chats to IndexedDB`);
     } catch (error) {
       console.error('Failed to save chat history:', error);
       // Fallback to localStorage without cleanup
@@ -152,7 +136,7 @@ class StorageService {
     }
   }
 
-  // Load chat history with fallback
+  // Load chat history
   async loadChatHistory() {
     try {
       // Try localStorage first
@@ -181,20 +165,16 @@ class StorageService {
             // Ignore localStorage errors
           }
           resolve(chats);
-        };
-        
+        };        
         request.onerror = () => {
-          console.error('Failed to load from IndexedDB');
           resolve([]);
-        };
-      });
+        };      });
     } catch (error) {
-      console.error('Failed to load chat history:', error);
       return [];
     }
   }
 
-  // Parse chat data into Chat objects
+  // Parse chat data into objects
   parseChats(chatData) {
     if (!Array.isArray(chatData)) return [];
     
@@ -209,7 +189,7 @@ class StorageService {
     }).sort((a, b) => new Date(b.lastUpdated) - new Date(a.lastUpdated));
   }
 
-  // Clear all chat history
+  // Clear chat history
   async clearChatHistory() {
     try {
       localStorage.removeItem(this.STORAGE_KEY);
@@ -217,18 +197,14 @@ class StorageService {
       if (!this.db) {
         await this.initDB();
       }
-      
-      const transaction = this.db.transaction([this.STORE_NAME], 'readwrite');
-      const store = transaction.objectStore(this.STORE_NAME);
-      await store.clear();
-      
-      console.log('All chat history cleared');
+        const transaction = this.db.transaction([this.STORE_NAME], 'readwrite');
+      const store = transaction.objectStore(this.STORE_NAME);      await store.clear();
     } catch (error) {
-      console.error('Failed to clear chat history:', error);
+      // Silent error handling
     }
   }
 
-  // Get storage usage statistics
+  // Get storage statistics
   async getStorageStats() {
     try {
       if (!this.db) {
@@ -252,10 +228,9 @@ class StorageService {
             chatsWithSummary: chats.filter(c => c.hasSummary).length,
             largestChatMB: Math.max(...chats.map(c => this.getChatSizeMB(c))).toFixed(2)
           });
-        };
-      });
+        };      });
     } catch (error) {
-      console.error('Failed to get storage stats:', error);      return {
+      return {
         totalChats: 0,
         totalSizeMB: '0',
         chatsWithSummary: 0,

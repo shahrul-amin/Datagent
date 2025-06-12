@@ -1,6 +1,6 @@
 # Chat controller for handling chat-related endpoints
 import logging
-from flask import request, jsonify
+from flask import request, jsonify, Response
 from typing import Dict, Any
 import sys
 import json
@@ -114,3 +114,117 @@ class ChatController:
     def handle_health_check(self) -> Dict[str, Any]:
         """Handle health check requests"""
         return {'status': 'healthy', 'service': 'datagent-api'}, 200
+    
+    def handle_chat_stream(self):
+        """Handle streaming chat requests for real-time response generation"""
+        try:
+            # Parse request data
+            if request.content_type and 'application/json' in request.content_type:
+                data = request.get_json()
+                message = data.get('message')
+                history = data.get('history', [])
+                plot_images = data.get('plot_images', [])
+                session_id = data.get('session_id', 'default')
+            else:
+                return {'error': 'Content-Type must be application/json for streaming'}, 400
+            
+            if not message:
+                return {'error': 'Message is required'}, 400
+            
+            # Create chat request
+            chat_request = ChatRequest(message=message, history=history)
+            
+            def generate_stream():
+                """Generator function for streaming response"""
+                try:
+                    # Generate streaming response
+                    for chunk in self.gemini_service.generate_response_stream(
+                        chat_request, 
+                        uploaded_file_path=None,  # File uploads not supported in streaming yet
+                        plot_images=plot_images
+                    ):
+                        # Format as Server-Sent Events
+                        yield f"data: {json.dumps({'chunk': chunk, 'type': 'text'})}\n\n"
+                    
+                    # Send completion signal
+                    yield f"data: {json.dumps({'type': 'complete'})}\n\n"
+                    
+                except Exception as e:
+                    # Send error in stream
+                    yield f"data: {json.dumps({'error': str(e), 'type': 'error'})}\n\n"
+            
+            return Response(
+                generate_stream(),
+                mimetype='text/event-stream',
+                headers={
+                    'Cache-Control': 'no-cache',
+                    'Connection': 'keep-alive',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Headers': 'Content-Type',
+                }
+            )
+            
+        except Exception as e:
+            logger.error(f"Error in streaming chat request: {e}")
+            return {'error': 'Internal server error', 'details': str(e)}, 500
+    
+    def handle_chat_request_stream(self) -> Response:
+        """Handle streaming chat requests"""
+        try:
+            # Parse request data
+            data = request.get_json()
+            if not data:
+                return Response("Invalid request data", status=400)
+            
+            message = data.get('message')
+            if not message:
+                return Response("Message is required", status=400)
+            
+            history = data.get('history', [])
+            session_id = data.get('session_id', 'default')
+            
+            # Create request object
+            chat_request = ChatRequest(
+                message=message,
+                history=history
+            )
+            
+            # Get uploaded file path if available
+            uploaded_file_path = self.file_service.get_latest_uploaded_file()
+            
+            # Get plot images from previous conversation
+            plot_images = self.sequential_workflow.get_session_plots_for_gemini(session_id)
+            
+            def generate_response():
+                """Generator function for streaming response"""
+                try:
+                    # Stream response from Gemini
+                    for chunk in self.gemini_service.generate_response_stream(
+                        chat_request, 
+                        uploaded_file_path, 
+                        plot_images
+                    ):
+                        if chunk:
+                            yield f"data: {json.dumps({'content': chunk})}\n\n"
+                    
+                    # Signal end of stream
+                    yield f"data: {json.dumps({'done': True})}\n\n"
+                    
+                except Exception as e:
+                    logger.error(f"Error in streaming response: {e}")
+                    yield f"data: {json.dumps({'error': str(e)})}\n\n"
+            
+            return Response(
+                generate_response(),
+                mimetype='text/event-stream',
+                headers={
+                    'Cache-Control': 'no-cache',
+                    'Connection': 'keep-alive',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Headers': 'Content-Type'
+                }
+            )
+            
+        except Exception as e:
+            logger.error(f"Error in streaming chat request: {e}")
+            return Response(f"Error: {str(e)}", status=500)

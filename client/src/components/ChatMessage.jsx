@@ -146,14 +146,23 @@ export default function ChatMessage({ type, text, file, loading, error, isSummar
             </div>
           )}          <p style={{ color: 'var(--text-primary)' }}>{text || ''}</p>
         </>
-      );    }
-
-    // Bot response - render markdown for all bot messages
+      );    }    // Bot response - render markdown for all bot messages
     if (type === 'bot') {
       // Handle empty or null text
       if (!text) {
         return <p style={{ color: 'var(--text-secondary)' }}>No response</p>;
       }
+
+      // Create typing cursor component
+      const TypingCursor = () => (
+        <span 
+          className="inline-block w-2 h-5 ml-1 animate-pulse"
+          style={{ 
+            backgroundColor: 'var(--accent-blue)',
+            animation: 'blink 1s infinite'
+          }}
+        />
+      );
 
       // Check if it's a rich response
       if (typeof text === 'object' && text?.type === 'rich_response') {
@@ -291,9 +300,7 @@ export default function ChatMessage({ type, text, file, loading, error, isSummar
             })}
           </div>
         );
-      }
-
-      // Plain text bot response - render as markdown
+      }      // Plain text bot response - render as markdown
       return (
         <div className="markdown-content prose dark:prose-invert max-w-none">
           <ReactMarkdown
@@ -371,6 +378,9 @@ export default function ChatMessage({ type, text, file, loading, error, isSummar
           >
             {text || ''}
           </ReactMarkdown>
+          {loading && (
+            <TypingCursor />
+          )}
         </div>
       );
     }

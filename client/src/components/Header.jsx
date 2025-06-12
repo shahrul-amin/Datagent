@@ -1,4 +1,4 @@
-// Clean welcome header with suggestion cards
+// Welcome header with suggestion cards
 export default function Header({ onSuggestionClick }) {
   const suggestions = [
     { text: "📊 Analyze my data", icon: "analytics" },

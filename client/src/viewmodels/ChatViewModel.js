@@ -1,4 +1,4 @@
-// Chat ViewModel - handles all chat business logic
+// Chat business logic
 import { useState, useRef, useEffect } from 'react';
 import { Chat, ChatMessage, FileState } from '../models/ChatModels.js';
 import ApiService from '../services/ApiService.js';
@@ -131,21 +131,46 @@ export function useChatViewModel() {  const [chatHistory, setChatHistory] = useS
     setCurrentChat(updatedChat);
     setIsProcessing(true);
 
-    abortController.current = new AbortController();
-
-    try {
+    abortController.current = new AbortController();    try {
       let response;
       
       if (file.hasFile()) {
+        // File uploads still use non-streaming for now
         response = await ApiService.sendFileMessage(file.file, message, activeChat.messages);
+        
+        // Update bot message with response
+        activeChat.updateLastMessage({
+          text: response.message,
+          loading: false,
+          meta: response.metadata
+        });
       } else {
-        response = await ApiService.sendTextMessage(message, activeChat.messages);
-      }      // Update bot message with response
-      activeChat.updateLastMessage({
-        text: response.message,
-        loading: false,
-        meta: response.metadata
-      });
+        // Use streaming for text messages to create typing effect
+        let accumulatedText = '';
+        
+        await ApiService.sendTextMessageStream(
+          message, 
+          activeChat.messages,
+          (chunk) => {
+            // This callback is called for each chunk received
+            accumulatedText += chunk;
+            activeChat.updateLastMessage({
+              text: accumulatedText,
+              loading: true, // Keep loading state to show typing cursor
+              meta: null
+            });
+            setCurrentChat({...activeChat}); // Force re-render
+          },
+          abortController.current.signal
+        );
+        
+        // Mark as complete when streaming is done
+        activeChat.updateLastMessage({
+          text: accumulatedText,
+          loading: false,
+          meta: null
+        });
+      }
 
     } catch (error) {
       let errorMessage = 'An error occurred';

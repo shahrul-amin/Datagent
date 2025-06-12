@@ -2,12 +2,14 @@
 import os
 import logging
 import google.generativeai as genai
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Generator
 import sys
 sys.path.append('..')
 from models.chat_models import ChatMessage, ChatRequest, ChatResponse
 from utils.prompts import GeminiPrompts
 from utils.gemini_factory import GeminiModelFactory
+from utils.file_upload_cache import file_upload_cache
+from config import config
 
 logger = logging.getLogger(__name__)
 
@@ -31,17 +33,53 @@ class GeminiService:
                 plot_images
             )
             
-            # Generate response
-            response = model.generate_content(content)
+            # Generate response (non-streaming for compatibility)
+            if config.ENABLE_STREAMING:
+                # For now, we'll collect streaming response and return as string
+                # Frontend streaming implementation can be added later
+                response_chunks = []
+                stream = self.model_factory.generate_content_stream_with_retry(model, content)
+                for chunk in stream:
+                    if chunk.text:
+                        response_chunks.append(chunk.text)
+                response_text = ''.join(response_chunks)
+            else:
+                response = self.model_factory.generate_content_with_retry(model, content)
+                response_text = response.text
             
-            if not response.text:
+            if not response_text:
                 raise ValueError("Empty response from Gemini")
                 
-            return response.text
+            return response_text
             
         except Exception as e:
             logger.error(f"Error generating Gemini response: {e}")
             raise
+
+    def generate_response_stream(self, request: ChatRequest, uploaded_file_path: Optional[str] = None, plot_images: Optional[List] = None) -> Generator[str, None, None]:
+        """Generate a streaming response using Gemini AI"""
+        try:
+            # Create the model
+            model = self.model_factory.create_model()
+            
+            # Prepare the content
+            content = self._prepare_content_with_plot_history(
+                request.message, 
+                uploaded_file_path, 
+                request.history, 
+                plot_images
+            )
+            
+            # Generate streaming response
+            stream = self.model_factory.generate_content_stream_with_retry(model, content)
+            
+            for chunk in stream:
+                if chunk.text:
+                    yield chunk.text
+                    
+        except Exception as e:
+            logger.error(f"Error generating streaming Gemini response: {e}")
+            yield f"Error: {str(e)}"
 
     def _prepare_prompt(self, user_message: str, uploaded_file_path: Optional[str] = None, history: Optional[List] = None, plot_images: Optional[List] = None) -> str:
         """Prepare the prompt for Gemini with plot context"""
@@ -49,7 +87,7 @@ class GeminiService:
             return self.prompts.get_data_analysis_prompt(user_message, uploaded_file_path, history, plot_images)
         else:
             return self.prompts.get_chat_prompt(user_message, history)
-      
+    
     def _prepare_content(self, user_message: str, uploaded_file_path: Optional[str] = None, history: Optional[List] = None, plot_images: Optional[List] = None):
         """Prepare content for Gemini, including file uploads and plot images if needed"""
         prompt = self._prepare_prompt(user_message, uploaded_file_path, history, plot_images)
@@ -59,15 +97,25 @@ class GeminiService:
                 # Determine the correct MIME type based on file extension
                 mime_type = self._get_mime_type(uploaded_file_path)
                 
-                # Upload file to Gemini with correct MIME type
-                uploaded_file = genai.upload_file(path=uploaded_file_path, mime_type=mime_type)
-                logger.info(f"Uploaded file to Gemini: {uploaded_file.name} with MIME type: {mime_type}")
-                
-                # Return content with both text and file
-                return [prompt, uploaded_file]
+                # Check cache first
+                cached_file = file_upload_cache.get_cached_file(uploaded_file_path)
+                if cached_file:
+                    logger.info(f"Using cached file upload: {cached_file.name}")
+                    return [prompt, cached_file]
+                else:
+                    # Upload file to Gemini with correct MIME type
+                    uploaded_file = genai.upload_file(path=uploaded_file_path, mime_type=mime_type)
+                    logger.info(f"Uploaded file to Gemini: {uploaded_file.name} with MIME type: {mime_type}")
+                    
+                    # Cache the uploaded file
+                    file_upload_cache.cache_file(uploaded_file_path, uploaded_file, mime_type)
+                    
+                    # Return content with both text and file
+                    return [prompt, uploaded_file]
                 
             except Exception as e:
-                logger.error(f"Error uploading file to Gemini: {e}")                # Fall back to text only
+                logger.error(f"Error uploading file to Gemini: {e}")
+                # Fall back to text only
                 return prompt
         else:
             return prompt
@@ -114,12 +162,24 @@ class GeminiService:
         if uploaded_file_path and os.path.exists(uploaded_file_path):
             try:
                 mime_type = self._get_mime_type(uploaded_file_path)
-                uploaded_file = genai.upload_file(path=uploaded_file_path, mime_type=mime_type)
-                content_parts.append(uploaded_file)
-                logger.info(f"Added dataset file to Gemini context: {uploaded_file.name}")
+                
+                # Check cache first
+                cached_file = file_upload_cache.get_cached_file(uploaded_file_path)
+                if cached_file:
+                    content_parts.append(cached_file)
+                    logger.info(f"Using cached file upload: {cached_file.name}")
+                else:
+                    # Upload new file and cache it
+                    uploaded_file = genai.upload_file(path=uploaded_file_path, mime_type=mime_type)
+                    content_parts.append(uploaded_file)
+                    
+                    # Cache the uploaded file
+                    file_upload_cache.cache_file(uploaded_file_path, uploaded_file, mime_type)
+                    logger.info(f"Uploaded and cached file: {uploaded_file.name}")
+                    
             except Exception as e:
                 logger.error(f"Error uploading dataset file to Gemini: {e}")
-        
+
         return content_parts if len(content_parts) > 1 else content_parts[0]
     
     def _get_mime_type(self, file_path: str) -> str:
