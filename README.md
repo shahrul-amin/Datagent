@@ -39,45 +39,75 @@ A powerful AI-driven data analysis platform that combines the intelligence of Go
 
 ```
 datagent/
+├── .git/                   # Git version control
+├── .gitignore             # Git ignore rules
+├── .vscode/               # VS Code workspace settings
+├── LICENSE                # Project license
+├── README.md              # Project documentation
+│
 ├── client/                 # React frontend application
 │   ├── src/
-│   │   ├── components/     # Reusable UI components
+│   │   ├── App.jsx        # Main application component
+│   │   ├── main.jsx       # Application entry point
+│   │   ├── index.css      # Global styles
+│   │   ├── components/    # Reusable UI components
 │   │   │   ├── ChatInput.jsx
 │   │   │   ├── ChatMessage.jsx
 │   │   │   ├── ChatMessageList.jsx
 │   │   │   ├── FileUpload.jsx
 │   │   │   ├── Header.jsx
-│   │   │   └── Sidebar.jsx
-│   │   ├── services/       # API and storage services
+│   │   │   ├── Sidebar.jsx
+│   │   │   └── StorageStats.jsx
+│   │   ├── models/        # Data models
+│   │   │   └── ChatModels.js
+│   │   ├── services/      # API and storage services
 │   │   │   ├── ApiService.js
 │   │   │   └── StorageService.js
-│   │   ├── viewmodels/     # Business logic layer
+│   │   ├── viewmodels/    # Business logic layer
 │   │   │   └── ChatViewModel.js
-│   │   └── views/          # Main view components
+│   │   └── views/         # Main view components
 │   │       └── ChatView.jsx
-│   ├── public/             # Static assets
-│   └── package.json        # Frontend dependencies
+│   ├── public/            # Static assets
+│   │   ├── gemini_icon.png
+│   │   ├── logo.png
+│   │   └── user_icon.png
+│   ├── package.json       # Frontend dependencies
+│   ├── vite.config.js     # Vite configuration
+│   ├── eslint.config.js   # ESLint configuration
+│   └── index.html         # HTML template
 │
 └── server/                 # Flask backend application
-    ├── controllers/        # Request handlers
+    ├── .env               # Environment variables (create this file)
+    ├── app.py             # Main Flask application
+    ├── config.py          # Configuration management
+    ├── requirements.txt   # Backend dependencies
+    ├── controllers/       # Request handlers
+    │   ├── __init__.py
     │   ├── chat_controller.py
     │   └── file_controller.py
-    ├── models/             # Data models
+    ├── models/            # Data models
+    │   ├── __init__.py
     │   └── chat_models.py
-    ├── services/           # Business logic services
+    ├── services/          # Business logic services
+    │   ├── __init__.py
     │   ├── gemini_service.py
     │   ├── file_service.py
     │   ├── plot_context_service.py
     │   ├── response_service.py
     │   └── sequential_workflow_service.py
-    ├── utils/              # Utility functions
+    ├── utils/             # Utility functions
+    │   ├── __init__.py
     │   ├── code_executor.py
     │   ├── dataset_manager.py
+    │   ├── file_upload_cache.py
     │   ├── gemini_factory.py
     │   ├── prompts.py
-    │   └── response_formatter.py
-    ├── datasets/           # Sample datasets
-    └── requirements.txt    # Backend dependencies
+    │   ├── response_formatter.py
+    │   └── cache/         # Cache directory
+    └── datasets/          # Sample datasets
+        ├── Iris.csv
+        ├── test_data.csv
+        └── train.csv
 ```
 
 ## Quick Start
@@ -122,9 +152,9 @@ datagent/
 
 4. **Environment Variables**
    
-   **API Configuration** - Create `server/.env`:
-   ```json
-   "GEMINI_API_KEY": "your_gemini_api_key_here"
+   **Backend Configuration** - Create `server/.env`:
+   ```
+   GEMINI_API_KEY=your_gemini_api_key_here
    ```
 
 ### Running the Application
@@ -132,6 +162,14 @@ datagent/
 1. **Start the Backend Server**
    ```bash
    cd server
+   
+   # Activate virtual environment
+   # On Windows:
+   venv\Scripts\activate
+   # On macOS/Linux:
+   source venv/bin/activate
+   
+   # Run the Flask application
    python app.py
    ```
    The Flask server will run on `http://localhost:5000`
@@ -143,7 +181,7 @@ datagent/
    ```
 
 3. **Access the Application**
-   Open your browser and navigate to link that given to you after starting frontend development server
+   Open your browser and navigate to the link provided by Vite (usually `http://localhost:5173`)
 
 ## Usage Guide
 
@@ -198,33 +236,43 @@ npm run preview
 ```bash
 cd server
 
+# Activate virtual environment
+# On Windows:
+venv\Scripts\activate
+# On macOS/Linux:
+source venv/bin/activate
+
 # Run with development settings
 python app.py
-
-# Run tests
-python -m pytest
 
 # Install new dependencies
 pip install <package-name>
 pip freeze > requirements.txt
+
+# Environment setup
+# Create .env file with your API keys
 ```
 
 ### Key Technologies
 
 **Frontend:**
-- React 18 with Hooks
-- Vite for build tooling
-- TailwindCSS for styling
-- Plotly.js for interactive charts
-- React Markdown for rich text
-- Syntax highlighting for code blocks
+- React 18 with Hooks and modern JSX
+- Vite for fast build tooling and development
+- TailwindCSS 4.x for modern styling
+- Plotly.js for interactive charts and visualizations
+- React Markdown for rich text rendering
+- React Syntax Highlighter for code blocks
+- Axios for HTTP requests
 
 **Backend:**
-- Flask web framework
-- Google Generative AI (Gemini)
-- Pandas for data manipulation
-- Matplotlib & Plotly for visualizations
+- Flask 3.x web framework
+- Google Generative AI (Gemini 2.0 Flash)
+- Python-dotenv for environment management
+- Pandas for data manipulation and analysis
+- Matplotlib & Plotly for static and interactive visualizations
+- Seaborn for statistical data visualization
 - Flask-CORS for cross-origin requests
+- Pillow for image processing
 
 ## Configuration
 
@@ -235,6 +283,14 @@ Edit `server/utils/prompts.py` to customize the AI agent's behavior:
 - Response formatting
 - Analysis workflow
 - Visualization preferences
+
+### Configuration Management
+
+The application uses `server/config.py` for centralized configuration management:
+- Environment variables loading
+- API key management
+- Application settings
+- File upload configurations
 
 ### API Endpoints
 
@@ -250,21 +306,30 @@ Edit `server/utils/prompts.py` to customize the AI agent's behavior:
 ### Common Issues
 
 1. **API Key Errors**
-   - Ensure your Gemini API key is valid and properly configured
-   - Check both backend config.json and frontend .env files
+   - Ensure your Gemini API key is valid and properly configured in `server/.env`
+   - Check that the `.env` file is in the correct location
+   - Verify the environment variables are being loaded correctly
 
 2. **File Upload Issues**
-   - Verify file format is supported
+   - Verify file format is supported (CSV, XLSX, JSON, SQL, XML)
    - Check file size (max 20MB)
    - Ensure server has write permissions for uploads directory
+   - Check the `cache/` directory in `server/utils/`
 
 3. **Import Errors**
-   - Activate virtual environment before running
+   - Activate virtual environment before running: `venv\Scripts\activate` (Windows)
    - Install all requirements: `pip install -r requirements.txt`
+   - Verify Python version compatibility (3.8+)
 
 4. **CORS Issues**
-   - Ensure Flask-CORS is installed
-   - Check if both frontend and backend are running on correct ports
+   - Ensure Flask-CORS is installed and configured
+   - Check if both frontend (port 5173) and backend (port 5000) are running
+   - Verify CORS settings in Flask application
+
+5. **Build Issues**
+   - Clear node_modules and reinstall: `npm ci`
+   - Check Node.js version (v16+)
+   - Clear Vite cache: `npm run dev -- --force`
 
 ### Performance Tips
 
@@ -299,5 +364,3 @@ For support, issues, or feature requests:
 - Review the documentation and examples
 
 ---
-
-**Built with ❤️ using React, Flask, and Google Gemini AI**
