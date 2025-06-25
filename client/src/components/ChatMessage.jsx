@@ -1,4 +1,4 @@
-// Clean ChatMessage component
+// ChatMessage component
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -26,7 +26,7 @@ export default function ChatMessage({ type, text, file, loading, error, isSummar
       );
     }
 
-    // Special rendering for summary messages - add type checking
+    // Rendering for summary messages
     if (isSummary || (typeof text === 'string' && text.startsWith('[CONVERSATION SUMMARY]'))) {
       const summaryText = (text || '').replace('[CONVERSATION SUMMARY]:', '').trim();
       return (
@@ -146,7 +146,7 @@ export default function ChatMessage({ type, text, file, loading, error, isSummar
             </div>
           )}          <p style={{ color: 'var(--text-primary)' }}>{text || ''}</p>
         </>
-      );    }    // Bot response - render markdown for all bot messages
+      );    }
     if (type === 'bot') {
       // Handle empty or null text
       if (!text) {
@@ -164,7 +164,7 @@ export default function ChatMessage({ type, text, file, loading, error, isSummar
         />
       );
 
-      // Check if it's a rich response
+      // Check if its a rich response
       if (typeof text === 'object' && text?.type === 'rich_response') {
         return (
           <div className="rich-response">
@@ -300,7 +300,7 @@ export default function ChatMessage({ type, text, file, loading, error, isSummar
             })}
           </div>
         );
-      }      // Plain text bot response - render as markdown
+      }
       return (
         <div className="markdown-content prose dark:prose-invert max-w-none">
           <ReactMarkdown

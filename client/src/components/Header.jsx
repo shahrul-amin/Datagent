@@ -1,9 +1,9 @@
 // Welcome header with suggestion cards
 export default function Header({ onSuggestionClick }) {
   const suggestions = [
-    { text: "📊 Analyze my data", icon: "analytics" },
-    { text: "📈 Create visualizations", icon: "trending_up" }, 
-    { text: "🤖 Give insight", icon: "smart_toy" }
+    { text: "Analyze my data", icon: "analytics" },
+    { text: "Create visualizations", icon: "trending_up" }, 
+    { text: "Give insight", icon: "smart_toy" }
   ];
 
   return (

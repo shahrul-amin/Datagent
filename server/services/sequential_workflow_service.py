@@ -1,5 +1,6 @@
 # Sequential Analysis Workflow Manager
 import logging
+import os
 from typing import Dict, Any, List, Optional
 import time
 import sys
@@ -40,21 +41,26 @@ class SequentialWorkflowManager:
             # Step 1: Initial Analysis Request
             logger.info("Step 1: Generating initial analysis")
             initial_response = self._generate_initial_analysis(request, uploaded_file_path, session_id)
-            logger.info("Initial analysis generated successfully")
+            logger.info(f"Initial analysis generated successfully - length: {len(str(initial_response))}")
             
             # Step 2: Process initial response and extract plots
             logger.info("Step 2: Processing response and extracting plots")
             processed_response = self._process_response_and_extract_plots(
                 initial_response, uploaded_file_path, session_id
             )
-            logger.info("Response processed successfully")
+            logger.info(f"Response processed successfully - response type: {type(processed_response)}")
               # Step 3: Sequential plot generation with feedback
-            if self._should_continue_sequential_generation(processed_response):
+            should_continue = self._should_continue_sequential_generation(processed_response)
+            logger.info(f"Should continue sequential generation: {should_continue}")
+            
+            if should_continue:
                 logger.info("Step 3: Continuing sequential generation")
                 enhanced_response = self._continue_sequential_generation(
                     request, uploaded_file_path, session_id, max_iterations
                 )
                 return enhanced_response
+            else:
+                logger.info("Returning initial comprehensive response without sequential continuation")
             
             return processed_response
             
@@ -76,16 +82,53 @@ class SequentialWorkflowManager:
         
         # Add context about sequential workflow
         enhanced_message = f"""
+        COMPREHENSIVE DATASET ANALYSIS REQUEST:
         {request.message}
         
-        ANALYSIS WORKFLOW:
-        Please provide a comprehensive dataset analysis following this structure:
-        1. Dataset Overview & Quality Assessment
-        2. Key Insights (5-7 specific findings)
-        3. First Visualization (most important pattern)
+        YOU MUST PROVIDE A COMPLETE, DETAILED ANALYSIS - NO SHORTCUTS OR SUMMARIES ALLOWED!
         
-        After each visualization, I will feed the generated plot back to you for context-aware next steps.
-        Start with the most fundamental visualization that reveals the dataset's core patterns.
+        REQUIRED SECTIONS (ALL MANDATORY):
+        
+        ## 📊 Dataset Overview
+        Write a comprehensive overview including:
+        - Exact dataset dimensions (e.g., "The dataset contains 1,025 rows and 14 columns")
+        - Complete list of all column names and their data types
+        - Missing values analysis for each column with counts and percentages
+        - Basic statistical summary for numerical columns (mean, median, std, min, max)
+        - Data type distribution (how many numerical vs categorical columns)
+        - Sample rows to show data structure
+        
+        ## 🔍 Key Insights & Patterns  
+        Provide exactly 5-7 detailed insights with specific numbers:
+        - Statistical findings with actual values and percentages
+        - Distribution patterns you observe in the data
+        - Notable correlations or relationships discovered
+        - Data quality observations (outliers, inconsistencies)
+        - Business/domain-relevant interpretations
+        - Trends or patterns that stand out
+        
+        ## 📈 Initial Visualization
+        Create ONE meaningful visualization:
+        - Write the complete Python code in a ```python code block
+        - Explain what the visualization reveals about the data
+        - Provide detailed insights drawn from the plot
+        - Choose the most important pattern to visualize first
+        
+        ## 💡 Summary & Next Steps
+        Conclude with:
+        - Key takeaways from your analysis
+        - Most important findings
+        - Recommended next steps for further analysis
+        
+        CRITICAL REQUIREMENTS:
+        - Write FULL, DETAILED paragraphs for each section - NO bullet points or short summaries
+        - Include specific numbers, percentages, and statistical measures throughout
+        - Explain findings as if writing for someone who hasn't seen the data
+        - Show the complete Python code for the visualization
+        - Data is already loaded as 'df' - do not include import or loading statements
+        - Write comprehensive text BEFORE showing any code
+        
+        REMEMBER: This is a comprehensive analysis request - provide complete, detailed content for all sections!
         """
         
         enhanced_request = ChatRequest(
@@ -108,8 +151,10 @@ class SequentialWorkflowManager:
         
         try:
             # Process with step-by-step execution
+            # Extract just the filename for the code executor
+            dataset_filename = os.path.basename(uploaded_file_path) if uploaded_file_path else None
             processed_response = self.response_service.process_gemini_response_with_step_by_step_plots(
-                response_text, uploaded_file_path
+                response_text, dataset_filename
             )
             
             logger.info(f"Processed response type: {type(processed_response)}")
@@ -163,15 +208,20 @@ class SequentialWorkflowManager:
     
     def _should_continue_sequential_generation(self, response: ChatResponse) -> bool:
         """Determine if sequential generation should continue"""
-        # Check if there are plots generated and analysis is comprehensive
-        if hasattr(response, 'message') and isinstance(response.message, dict):
-            if 'content' in response.message:
-                has_plots = any(
-                    section.get('type') == 'code' and section.get('data', {}).get('figures')
-                    for section in response.message['content']
-                )
-                return has_plots
+        # For now, disable automatic continuation to ensure full initial analysis is shown
+        # We want users to see the complete detailed analysis first
         return False
+        
+        # Original logic (disabled for now):
+        # Check if there are plots generated and analysis is comprehensive
+        # if hasattr(response, 'message') and isinstance(response.message, dict):
+        #     if 'content' in response.message:
+        #         has_plots = any(
+        #             section.get('type') == 'code' and section.get('data', {}).get('figures')
+        #             for section in response.message['content']
+        #         )
+        #         return has_plots
+        # return False
     
     def _continue_sequential_generation(self, 
                                       original_request: ChatRequest,
@@ -192,6 +242,9 @@ class SequentialWorkflowManager:
             # Prepare plot context for Gemini
             plot_context = self.plot_context_service.get_context_prompt(session_id)
             gemini_plot_images = self.plot_context_service.prepare_plots_for_gemini(session_id)
+            
+            # Get plot metadata for text prompts (separate from PIL images for Gemini)
+            plot_metadata = self.plot_context_service.get_session_plots(session_id)
             
             # Generate next analysis step with plot context
             next_request_message = f"""
@@ -215,6 +268,7 @@ class SequentialWorkflowManager:
             )
             
             # Generate response with plot context
+            # Don't pass PIL images to the prompt system - they're handled separately in _prepare_content_with_plot_history
             next_response = self.gemini_service.generate_response(
                 next_request,
                 uploaded_file_path,

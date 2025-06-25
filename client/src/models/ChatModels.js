@@ -3,7 +3,7 @@
 export class ChatMessage {
   constructor(type, text, file = null, loading = false, error = false, meta = null) {
     this.type = type; // 'user' | 'bot'
-    this.text = text || ''; // Ensure text is always a string
+    this.text = text || '';
     this.file = file;
     this.loading = loading;
     this.error = error;

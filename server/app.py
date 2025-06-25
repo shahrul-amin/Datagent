@@ -48,13 +48,23 @@ def chat():
         logger.error(f"Error in chat endpoint: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/chat/stream', methods=['POST'])
+@app.route('/chat/stream', methods=['GET', 'POST'])
 def chat_stream():
     """Streaming chat endpoint for real-time responses"""
     try:
         return chat_controller.handle_chat_stream()
     except Exception as e:
         logger.error(f"Error in streaming chat endpoint: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/debug/session/<session_id>', methods=['GET'])
+def debug_session(session_id):
+    """Debug endpoint to check session state"""
+    try:
+        response = chat_controller.debug_session_state(session_id)
+        return jsonify(response), 200
+    except Exception as e:
+        logger.error(f"Error in debug endpoint: {e}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':

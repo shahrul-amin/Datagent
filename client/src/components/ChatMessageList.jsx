@@ -15,7 +15,7 @@ export default function ChatMessageList({ messages }) {
     scrollToBottom();
   }, [messages]);
 
-  // Also scroll when the last message is being updated (for streaming responses)
+  // Scroll when the last message is being updated (for streaming responses)
   useEffect(() => {
     const lastMessage = messages[messages.length - 1];
     if (lastMessage && lastMessage.loading) {

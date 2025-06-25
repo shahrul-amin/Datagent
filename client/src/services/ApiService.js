@@ -9,7 +9,7 @@ class ApiService {
       headers: {
         'Content-Type': 'application/json'
       }
-    });    // Add response interceptor for error handling
+    });
     this.client.interceptors.response.use(
       (response) => response,
       (error) => {
@@ -41,7 +41,7 @@ class ApiService {
     }));
     
     formData.append('history', JSON.stringify(formattedHistory));
-      // Use longer timeout for file uploads (2 minutes)
+
     const response = await this.client.post('/chat', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
       timeout: 120000 // 2 minutes for file processing

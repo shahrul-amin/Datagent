@@ -138,9 +138,56 @@ IMPORTANT: Never include import statements, data loading, or data preprocessing 
 ## Current User Message:
 {user_message}
 
-Please respond following the format guidelines above."""
+IMPORTANT: If this question relates to data analysis, patterns, comparisons, trends, or requires visualization to answer effectively, you MUST include relevant ```python code blocks with visualizations. Always explain insights from the visualizations.
+
+Please respond following the format guidelines above with comprehensive analysis and appropriate visualizations."""
     @staticmethod
     def get_data_analysis_prompt(user_message, uploaded_file_path=None, history=None, plot_images=None):
+        # Check if this is a comprehensive analysis request from sequential workflow
+        is_comprehensive_request = "COMPREHENSIVE DATASET ANALYSIS REQUEST" in user_message
+        
+        if is_comprehensive_request:
+            # For comprehensive requests, use the enhanced message directly with minimal wrapper
+            return f"""You are a Data Science Agent specialized in comprehensive dataset analysis.
+
+{user_message}
+
+ABSOLUTE REQUIREMENTS - FAILURE TO INCLUDE ANY OF THESE WILL BE CONSIDERED INCOMPLETE:
+
+1. **DATASET OVERVIEW SECTION** - Write detailed analysis including:
+   - Exact dataset dimensions (X rows, Y columns)
+   - Complete list of all column names and their data types
+   - Missing values count for each column
+   - Summary statistics for numerical columns
+   - Sample of the data structure
+
+2. **KEY INSIGHTS SECTION** - Provide exactly 5-7 insights with:
+   - Specific numerical findings (percentages, counts, averages)
+   - Distribution patterns observed in the data
+   - Notable correlations or relationships discovered
+   - Data quality observations
+   - Business/domain-relevant interpretations
+
+3. **VISUALIZATION SECTION** - Create ONE meaningful plot with:
+   - Complete Python code in ```python block
+   - Detailed explanation of what the plot reveals
+   - Insights drawn from the visualization
+
+4. **SUMMARY SECTION** - Conclude with:
+   - Key takeaways from the analysis
+   - Recommended next steps
+
+CRITICAL INSTRUCTIONS:
+- Write FULL, DETAILED text for each section - NO SUMMARIES OR CONDENSED VERSIONS
+- Include ALL the text analysis BEFORE showing any visualization
+- Show the complete Python code for visualizations
+- Use specific numbers, percentages, and statistical measures
+- Write as if explaining to someone who hasn't seen the data
+- Data is pre-loaded as 'df' - do not include import statements
+
+DO NOT PROVIDE A SUMMARY - PROVIDE THE COMPLETE DETAILED ANALYSIS."""
+            
+        # For regular requests, use the standard template
         # Build context from history and plot images
         history_context = ""
         if history:
@@ -156,9 +203,14 @@ Please respond following the format guidelines above."""
             plot_context += f"I have generated {len(plot_images)} plots in our previous conversation. "
             plot_context += "Please reference these plots in your analysis and build upon them for deeper insights.\n"
             for i, plot_info in enumerate(plot_images):
-                plot_context += f"- Plot {i+1}: {plot_info.get('description', 'Visualization')}\n"
+                # Handle both dict objects (metadata) and PIL Image objects
+                if isinstance(plot_info, dict):
+                    plot_context += f"- Plot {i+1}: {plot_info.get('description', 'Visualization')}\n"
+                else:
+                    # PIL Image object or other type - provide generic description
+                    plot_context += f"- Plot {i+1}: Visualization\n"
         
-        return f"""CRITICAL INSTRUCTION: You MUST provide comprehensive dataset analysis with structured visualizations.
+        return f"""You are analyzing a dataset and must provide comprehensive responses with visualizations.
 
 ## 🎯 Current Request:
 {user_message}
@@ -167,21 +219,30 @@ Please respond following the format guidelines above."""
 
 {plot_context}
 
-## 📋 MANDATORY RESPONSE REQUIREMENTS:
+## 📋 RESPONSE REQUIREMENTS:
 
-1. **ALWAYS** start with dataset overview and quality assessment
-2. **PROVIDE** 5-7 specific insights with concrete numbers/percentages  
-3. **GENERATE** 4-6 different visualization code blocks
-4. **INCLUDE** purpose explanation for each visualization
+1. **PROVIDE** detailed analysis relevant to the user's question
+2. **INCLUDE** specific insights with concrete numbers/percentages where relevant
+3. **GENERATE** at least 1-2 relevant visualization code blocks (each in separate ```python blocks)
+4. **EXPLAIN** what each visualization reveals about the data
 5. **REFERENCE** previous plots if they exist to build deeper analysis
-6. **END** with actionable recommendations
+6. **CONCLUDE** with actionable insights or recommendations
 
 ## 🔧 Technical Requirements:
 - Data is pre-loaded as 'df' - DO NOT include loading code
 - Each plot in separate ```python code blocks
 - Use show_plot() for matplotlib/seaborn, show_plotly(fig) for plotly
 - Include descriptive titles and proper axis labels
-- Use diverse plot types (histograms, scatter, box, heatmap, 3D, etc.)
+- Choose appropriate plot types for the question asked
+- Provide comprehensive textual analysis alongside visualizations
+
+IMPORTANT: For any data-related question, include relevant visualizations to support your analysis. Show the code and explain what insights the visualizations reveal.
+
+## 🎨 Visualization Guidelines:
+- Choose plot types that best answer the user's question
+- Include proper titles, labels, and formatting
+- Explain the purpose and insights from each plot
+- Make visualizations informative and easy to understand
 
 Follow the exact response structure from the system prompt."""
 

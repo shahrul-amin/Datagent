@@ -1,4 +1,4 @@
-# Configuration management for Datagent application
+# Configuration management
 import os
 from dotenv import load_dotenv
 

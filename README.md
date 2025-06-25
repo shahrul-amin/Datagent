@@ -236,21 +236,15 @@ npm run preview
 ```bash
 cd server
 
-# Activate virtual environment
-# On Windows:
-venv\Scripts\activate
-# On macOS/Linux:
-source venv/bin/activate
-
 # Run with development settings
 python app.py
+
+# Run tests
+python -m pytest
 
 # Install new dependencies
 pip install <package-name>
 pip freeze > requirements.txt
-
-# Environment setup
-# Create .env file with your API keys
 ```
 
 ### Key Technologies
@@ -364,3 +358,5 @@ For support, issues, or feature requests:
 - Review the documentation and examples
 
 ---
+
+**Built with ❤️ using React, Flask, and Google Gemini AI**

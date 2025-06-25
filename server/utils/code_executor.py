@@ -123,25 +123,43 @@ class CodeExecutor:
     
     def _setup_data_context(self, uploaded_filename: str = None):
         """Setup the data context for code execution"""
+        logger.info(f"Setting up data context with filename: {uploaded_filename}")
         df = None
         if uploaded_filename:
+            logger.info(f"Loading dataset: {uploaded_filename}")
             df = self.dataset_manager.load_dataset(uploaded_filename)
-            if df is None:
+            if df is not None:
+                logger.info(f"Successfully loaded dataset: shape={df.shape}")
+            else:
+                logger.warning(f"Failed to load dataset: {uploaded_filename}")
                 try:
                     example_manager = DatasetManager("example_data")
                     df = example_manager.load_dataset(uploaded_filename)
-                except:
-                    pass
+                    if df is not None:
+                        logger.info(f"Loaded from example_data: shape={df.shape}")
+                except Exception as e:
+                    logger.warning(f"Failed to load from example_data: {e}")
         
         if df is None:
+            logger.info("No specific dataset provided, attempting auto-detection")
             df = self.dataset_manager.auto_detect_dataset()
+            if df is not None:
+                logger.info(f"Auto-detected dataset: shape={df.shape}")
             
         if df is None:
+            logger.info("Trying example_data auto-detection as fallback")
             try:
                 example_manager = DatasetManager("example_data")
                 df = example_manager.auto_detect_dataset()
-            except:
-                pass
+                if df is not None:
+                    logger.info(f"Auto-detected from example_data: shape={df.shape}")
+            except Exception as e:
+                logger.warning(f"Example data fallback failed: {e}")
+                
+        if df is None:
+            logger.error("No dataset could be loaded - code execution may fail")
+        else:
+            logger.info(f"Final dataset setup complete: {df.shape} with columns: {list(df.columns)}")
                 
         return df
     

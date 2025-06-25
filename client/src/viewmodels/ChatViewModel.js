@@ -145,30 +145,14 @@ export function useChatViewModel() {  const [chatHistory, setChatHistory] = useS
           meta: response.metadata
         });
       } else {
-        // Use streaming for text messages to create typing effect
-        let accumulatedText = '';
+        // Use regular API for text messages (disable streaming temporarily)
+        response = await ApiService.sendTextMessage(message, activeChat.messages);
         
-        await ApiService.sendTextMessageStream(
-          message, 
-          activeChat.messages,
-          (chunk) => {
-            // This callback is called for each chunk received
-            accumulatedText += chunk;
-            activeChat.updateLastMessage({
-              text: accumulatedText,
-              loading: true, // Keep loading state to show typing cursor
-              meta: null
-            });
-            setCurrentChat({...activeChat}); // Force re-render
-          },
-          abortController.current.signal
-        );
-        
-        // Mark as complete when streaming is done
+        // Update bot message with response
         activeChat.updateLastMessage({
-          text: accumulatedText,
+          text: response.message,
           loading: false,
-          meta: null
+          meta: response.metadata
         });
       }
 
